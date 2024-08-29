@@ -47,29 +47,35 @@ class Wallet(models.Model):
 
     def __str__(self):
         return self.moyen_paiement
+    
+class Facture(models.Model):
+    id_facture = models.CharField(max_length=20, unique=True, default='',blank=True, null=True) 
+    date_paiement = models.DateTimeField(blank=True, null=True)
+    montant = models.DecimalField(max_digits=10, decimal_places=2,blank=True, null=True)
+    telephone_commercant = models.CharField(max_length=20,blank=True, null=True) 
+    numero_recu = models.CharField(max_length=20, unique=True,blank=True, null=True) 
+    note = models.CharField(max_length=20, blank=True, null=True) 
 
+    def __str__(self):
+        return self.id_facture
+    
 TRANSACTION_STATUS = (
     ("Failed", "Failed"),
     ("Completed", "Completed"),
     ("Pending", "Pending"),
     ("Processing", "Processing"),
-    ("Request_sent", "Request_sent"),
-    ("Request_settled", "Request settled"),
-    ("Request_processing", "Request processing"),
 )
 
 class Transaction(models.Model):
-    transaction_id = ShortUUIDField(unique=True, length=15, max_length=20, prefix="TRN")
-    id_facture = models.CharField(max_length=20, unique=True, default='', editable=False)
-    montant = models.DecimalField(max_digits=10, decimal_places=2)
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE)
-    date = models.DateTimeField(auto_now_add=True)
+    id_transaction = ShortUUIDField(unique=True, length=15, max_length=20, prefix="TRN",blank=True, null=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE,blank=True, null=True)
+    facture = models.ForeignKey(Facture, on_delete=models.CASCADE,blank=True, null=True)
     status = models.CharField(choices=TRANSACTION_STATUS, max_length=100, default="Pending")
     code_paiement = models.CharField(max_length=20, blank=True, null=True)
-    remarque = models.TextField(blank=True, null=True)
+
 
     def __str__(self):
-        return f"Transaction {self.id} - {self.montant} - {self.wallet.moyen_paiement}"
+        return f"Transaction {self.id_transaction} - {self.montant} - {self.wallet.moyen_paiement}"
 
     def save(self, *args, **kwargs):
         if not self.id_facture:
@@ -78,3 +84,5 @@ class Transaction(models.Model):
 
     def generate_id_facture(self):
         return str(uuid.uuid4())[:8]  # Génère un UUID et prend les 8 premiers caractères
+
+

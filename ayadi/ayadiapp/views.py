@@ -13,6 +13,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 import random
 import string
+from django.utils import timezone
+from django.shortcuts import get_object_or_404
 
 def send_payment_request(transaction):
     # Déterminer l'URL de l'API de la banque en fonction du wallet
@@ -107,3 +109,54 @@ class WalletListView(APIView):
 
 
 # ------- demande payment seddad --------
+def generate_id_facture():
+    return str(uuid.uuid4())[:8]  # Génère un UUID et prend les 8 premiers caractères
+
+id_facture = generate_id_facture()
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def demand_payment(request):
+    nom_payeur = request.data.get("nom_payeur")
+    prenom_payeur = request.data.get("prenom_payeur")
+    montant = request.data.get("montant")
+    
+    if not all([nom_payeur, prenom_payeur, montant]):
+        return Response({"error": "Nom, prénom et montant sont requis."}, status=400)
+    
+    wallet = get_object_or_404(Wallet, type="wallet")
+    code_abonnement = wallet.code_abonnement
+    
+    current_date = timezone.now().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + "Z"
+    print(current_date)
+
+    data = {
+        "id_facture": id_facture,
+        "montant": montant,
+        "nom_payeur": nom_payeur,
+        "prenom_payeur": prenom_payeur,
+        "date": "2024-08-15T16:52:47.720Z", 
+        "code_abonnement": code_abonnement,
+        "remarque": ""
+    }
+    
+    url = "https://gimtel-pay-a99c057b5927.herokuapp.com/api/demande_paiement"
+    
+    headers = {
+        "accept": "application/json",
+        "Authorization": "Api-Key UaPHMqPD.WsNY4ZQkDTH2OWVuWGUHCi3W61gfwEML",
+        "content-type": "application/json"
+    }
+    
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+        
+        # Extraire le contenu de la réponse de l'API externe
+        response_data = response.json()
+        
+        # Retourner le contenu de la réponse de l'API externe à l'utilisateur
+        return Response(response_data, status=response.status_code)
+    
+    except requests.exceptions.RequestException as e:
+        return Response({"error": str(e)}, status=400)

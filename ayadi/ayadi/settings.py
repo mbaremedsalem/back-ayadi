@@ -12,7 +12,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 import os
 from pathlib import Path
+from datetime import timedelta
+import dj_database_url
 
+import django_heroku
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -30,12 +33,20 @@ ALLOWED_HOSTS = ["*"]
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:4200',
+    'https://front-ayadi-6dt7mcl5u-mbares-projects.vercel.app',
 ]
 
+# CORS_ALLOWED_ORIGINS = [
+#     'https://front-ayadi-6dt7mcl5u-mbares-projects.vercel.app',
+# ]
+
+
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
 
 INSTALLED_APPS = [
+    'jazzmin',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -126,10 +137,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Activate Django-Heroku.
+django_heroku.settings(locals())
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -145,4 +161,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
+}
+
+JAZZMIN_SETTINGS = {
+
+    "site_header": "ShopPro",
+    "site_title":"ShopPro",
+    "site_brand": "Shoping Made Easy...",
+    "site_logo": "images/logo.png",
+    "copyright": "ShopPro - All RIght Reserverd © Copyright 2024",
+    # "order_with_respect_to": ["core", 'userauths', "transactions" , 'addon', 'blog']
+
+    
 }
