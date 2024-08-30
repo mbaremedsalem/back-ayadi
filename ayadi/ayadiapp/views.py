@@ -15,6 +15,7 @@ import random
 import string
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
+import logging
 
 def send_payment_request(transaction):
     # Déterminer l'URL de l'API de la banque en fonction du wallet
@@ -108,11 +109,8 @@ class WalletListView(APIView):
         return JsonResponse({"status": response.status_code, "Message": "Failed"}, status=response.status_code)
 
 
-# ------- demande payment seddad --------
 def generate_id_facture():
     return str(uuid.uuid4())[:8]  # Génère un UUID et prend les 8 premiers caractères
-
-id_facture = generate_id_facture()
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -120,9 +118,13 @@ def demand_payment(request):
     nom_payeur = request.data.get("nom_payeur")
     prenom_payeur = request.data.get("prenom_payeur")
     montant = request.data.get("montant")
-    
+    telephone_payeur = request.data.get("telephone_payeur")
+
     if not all([nom_payeur, prenom_payeur, montant]):
         return Response({"error": "Nom, prénom et montant sont requis."}, status=400)
+    
+    # Générer un nouvel id_facture pour chaque requête
+    id_facture = generate_id_facture()
     
     wallet = get_object_or_404(Wallet, type="wallet")
     code_abonnement = wallet.code_abonnement
@@ -135,7 +137,8 @@ def demand_payment(request):
         "montant": montant,
         "nom_payeur": nom_payeur,
         "prenom_payeur": prenom_payeur,
-        "date": "2024-08-15T16:52:47.720Z", 
+        "telephone_payeur": telephone_payeur,
+        "date": current_date, 
         "code_abonnement": code_abonnement,
         "remarque": ""
     }
@@ -154,9 +157,103 @@ def demand_payment(request):
         
         # Extraire le contenu de la réponse de l'API externe
         response_data = response.json()
+        print('Response Data:', response_data)  # Debugging output
+        
+        # Accéder à 'code_paiement' dans la réponse
+        data = response_data.get('data', {})
+        numero_recu = data.get('code_paiement')
+    
+        # Créer et sauvegarder la facture
+        facture = Facture(
+            id_facture=id_facture,
+            date_paiement=timezone.now(),
+            montant=montant,
+            telephone_commercant=telephone_payeur,
+            numero_recu=numero_recu,
+            note="Paiement réussi"
+        )
+        facture.save()
         
         # Retourner le contenu de la réponse de l'API externe à l'utilisateur
         return Response(response_data, status=response.status_code)
     
     except requests.exceptions.RequestException as e:
+        return Response({"error": str(e)}, status=400)
+
+
+# ------------------ confirme payment ---------------
+
+logger = logging.getLogger(__name__)
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def confirm_payment(request):
+    id_facture = request.data.get("id_facture")
+    id_transaction = request.data.get("id_transaction")
+    date_paiement = request.data.get("date_paiement")
+    montant = request.data.get("montant")
+    telephone_commercant = request.data.get("telephone_commercant")
+    numero_recu = request.data.get("numero_recu")
+    note = request.data.get("note")
+
+    # Logging the incoming data
+    logger.debug(f"Received data: {request.data}")
+
+    if not all([id_facture, id_transaction, date_paiement, montant, telephone_commercant, numero_recu]):
+        return Response({"error": "Tous les champs sont requis."}, status=400)
+
+    try:
+        factures = Facture.objects.all()
+        for facture in factures:
+            print(f"Facture: {facture.id_facture}, Date: {facture.date_paiement}, Montant: {facture.montant}, Téléphone: {facture.telephone_commercant}, Reçu: {facture.numero_recu}")
+
+
+        facture = Facture.objects.get(
+            id_facture=id_facture,
+            date_paiement=date_paiement,
+            montant=montant,
+            telephone_commercant=telephone_commercant,
+            numero_recu=numero_recu
+        )
+        logger.debug(f"Facture trouvée: {facture}")
+    except Facture.DoesNotExist:
+        factures = Facture.objects.all()
+        for facture in factures:
+            print(f"Facture: {facture.id_facture}, Date: {facture.date_paiement}, Montant: {facture.montant}, Téléphone: {facture.telephone_commercant}, Reçu: {facture.numero_recu}")
+
+        logger.warning(f"Facture non trouvée pour les données fournies: {request.data}")
+        return Response({"error": "Les données fournies ne correspondent à aucune facture existante."}, status=400)
+
+    try:
+        transaction = Transaction.objects.get(id_transaction=id_transaction, facture=facture)
+        logger.debug(f"Transaction trouvée: {transaction}")
+    except Transaction.DoesNotExist:
+        logger.warning(f"Transaction non trouvée pour la facture {id_facture} et l'ID de transaction {id_transaction}")
+        return Response({"error": "La transaction ne correspond à aucune transaction existante pour cette facture."}, status=400)
+
+    data = {
+        "id_facture": id_facture,
+        "id_transaction": id_transaction,
+        "date_paiement": date_paiement,
+        "montant": montant,
+        "telephone_commercant": telephone_commercant,
+        "numero_recu": numero_recu,
+        "note": note or ""
+    }
+
+    url = "https://gimtel-pay-a99c057b5927.herokuapp.com/api/confirmation_paiement"
+    headers = {
+        "accept": "application/json",
+        "Authorization": "Api-Key UaPHMqPD.WsNY4ZQkDTH2OWVuWGUHCi3W61gfwEML",
+        "content-type": "application/json"
+    }
+
+    try:
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+        response_data = response.json()
+        logger.debug(f"Response from external API: {response_data}")
+        return Response(response_data, status=response.status_code)
+
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error sending data to external API: {e}")
         return Response({"error": str(e)}, status=400)
