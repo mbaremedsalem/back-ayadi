@@ -16,6 +16,7 @@ import string
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 import logging
+from rest_framework_api_key.permissions import HasAPIKey
 
 def send_payment_request(transaction):
     # Déterminer l'URL de l'API de la banque en fonction du wallet
@@ -182,7 +183,6 @@ def demand_payment(request):
 
 
 # ------------------ confirme payment ---------------
-
 logger = logging.getLogger(__name__)
 @api_view(["POST"])
 @permission_classes([AllowAny])
@@ -209,10 +209,7 @@ def confirm_payment(request):
 
         facture = Facture.objects.get(
             id_facture=id_facture,
-            date_paiement=date_paiement,
             montant=montant,
-            telephone_commercant=telephone_commercant,
-            numero_recu=numero_recu
         )
         logger.debug(f"Facture trouvée: {facture}")
     except Facture.DoesNotExist:
@@ -257,3 +254,31 @@ def confirm_payment(request):
     except requests.exceptions.RequestException as e:
         logger.error(f"Error sending data to external API: {e}")
         return Response({"error": str(e)}, status=400)
+    
+
+
+@api_view(["POST"])
+@permission_classes([HasAPIKey])
+def save_transaction(request):
+    # Récupérer les données du corps de la requête
+    id_facture = request.data.get("id_facture")
+    id_transaction = request.data.get("id_transaction")
+    montant = request.data.get("montant")
+    telephone_commercant = request.data.get("telephone_commercant")
+    numero_recu = request.data.get("numero_recu")
+    note = request.data.get("note")
+
+    # Vérifier que les champs obligatoires sont présents
+    if not id_facture or not montant:
+        return Response({"error": "Les champs 'id_facture' et 'montant' sont obligatoires."}, status=400)
+    
+    # Vérifier si la facture avec le même id_facture et montant existe
+    try:
+        facture = Facture.objects.get(id_facture=id_facture, montant=montant)
+    except Facture.DoesNotExist:
+        return Response({"error": "La facture avec cet 'id_facture' et 'montant' n'existe pas."}, status=400)
+    
+    # Créer la transaction et l'associer à la facture
+    transaction = Transaction.objects.create(id_transaction=id_transaction, facture=facture)
+    
+    return Response({"success": "Transaction créée avec succès.", "id_transaction": transaction.id_transaction}, status=200)

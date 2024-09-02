@@ -3,7 +3,7 @@ from django.db import models
 from shortuuid.django_fields import ShortUUIDField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-
+from django.utils import timezone
 
 class Wallet(models.Model):
     moyen_paiement = models.CharField(max_length=100)
@@ -21,8 +21,10 @@ class Facture(models.Model):
     numero_recu = models.CharField(max_length=20, unique=True,blank=True, null=True) 
     note = models.CharField(max_length=20, blank=True, null=True) 
 
-    def __str__(self):
-        return self.id_facture
+    def save(self, *args, **kwargs):
+        if self.date_paiement:
+            self.date_paiement = timezone.localtime(self.date_paiement).strftime('%Y-%m-%d %H:%M:%S')
+        super(Facture, self).save(*args, **kwargs)
     
 TRANSACTION_STATUS = (
     ("Failed", "Failed"),
@@ -32,7 +34,7 @@ TRANSACTION_STATUS = (
 )
 
 class Transaction(models.Model):
-    id_transaction = ShortUUIDField(unique=True, length=15, max_length=20, prefix="TRN",blank=True, null=True)
+    id_transaction = models.CharField(max_length=20, blank=True, null=True) 
     facture = models.ForeignKey(Facture, on_delete=models.CASCADE,blank=True, null=True)
     status = models.CharField(choices=TRANSACTION_STATUS, max_length=100, default="Pending")
 

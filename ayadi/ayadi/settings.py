@@ -14,8 +14,8 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
-
 import django_heroku
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -56,7 +56,7 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'rest_framework',
-
+    "rest_framework_api_key",
     'ayadiapp',
 ]
 
@@ -160,6 +160,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.BasicAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
+        "rest_framework_api_key.permissions.HasAPIKey",
         'rest_framework.permissions.AllowAny',
     ],
 }
@@ -171,7 +172,5 @@ JAZZMIN_SETTINGS = {
     "site_brand": "Shoping Made Easy...",
     "site_logo": "images/logo.png",
     "copyright": "ShopPro - All RIght Reserverd © Copyright 2024",
-    # "order_with_respect_to": ["core", 'userauths', "transactions" , 'addon', 'blog']
-
-    
+    # "order_with_respect_to": ["core", 'userauths', "transactions" , 'addon', 'blog']   
 }
