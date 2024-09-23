@@ -282,3 +282,100 @@ def save_transaction(request):
     transaction = Transaction.objects.create(id_transaction=id_transaction, facture=facture)
     
     return Response({"success": "Transaction créée avec succès.", "id_transaction": transaction.id_transaction}, status=200)
+
+# ------ masrivi -------- 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def payment_notification(request):
+    try:
+        # Example of expected fields in the request
+        payment_id = request.data.get('payment_id')
+        status_payment = request.data.get('status')  # e.g., 'PAID', 'FAILED', etc.
+
+        if not payment_id or not status_payment:
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Log or process the payment status as needed
+        # For example, update the payment record in your database
+        # You can fetch the payment from the database using payment_id and update the status
+
+        # Example: Update payment status in your database
+        # payment = get_object_or_404(Payment, id=payment_id)
+        # payment.status = status_payment
+        # payment.save()
+
+        # Return a success response to acknowledge the notification
+        return Response({"message": "Payment notification received"}, status=status.HTTP_200_OK)
+
+    except Exception as e:
+        # Log the error and return a server error response
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def payment_success(request):
+    # Retrieve payment details from query parameters
+    payment_id = request.GET.get('payment_id')
+    amount = request.GET.get('amount')
+
+    # Check if required parameters are present
+    if not payment_id or not amount:
+        return Response({"error": "Payment details missing"}, status=400)
+
+    # Here you can verify the payment details if necessary
+    # For example, checking against the database or external service
+
+    # Return the success response with payment details
+    return Response({
+        "message": "Payment successful!",
+        "payment_id": payment_id,
+        "amount": amount
+    }, status=200)
+
+
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def payment_declined(request):
+    # Retrieve payment details from query parameters
+    payment_id = request.GET.get('payment_id')
+    reason = request.GET.get('reason')
+
+    # Check if required parameters are present
+    if not payment_id or not reason:
+        return Response({"error": "Payment details missing"}, status=400)
+
+    # Log or process the declined payment details here if necessary
+
+    # Return the decline response with payment details
+    return Response({
+        "message": "Payment declined.",
+        "payment_id": payment_id,
+        "reason": reason
+    }, status=200)
+
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def payment_canceled(request):
+    # Retrieve payment details from query parameters
+    payment_id = request.GET.get('payment_id')
+    cancel_reason = request.GET.get('reason')
+
+    # Check if required parameters are present
+    if not payment_id:
+        return Response({"error": "Payment ID is missing."}, status=400)
+
+    # Log or process the cancellation details here if necessary
+
+    # Return the cancel response with payment details
+    return Response({
+        "message": "Payment was canceled by the user.",
+        "payment_id": payment_id,
+        "reason": cancel_reason or "No reason provided"
+    }, status=200)
+
