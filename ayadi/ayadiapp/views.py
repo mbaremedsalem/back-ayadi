@@ -288,12 +288,7 @@ def save_transaction(request):
 @permission_classes([AllowAny])
 def payment_notification(request):
     try:
-        # Example of expected fields in the request
-        payment_id = request.data.get('payment_id')
-        status_payment = request.data.get('status')  # e.g., 'PAID', 'FAILED', etc.
 
-        if not payment_id or not status_payment:
-            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
 
         # Log or process the payment status as needed
         # For example, update the payment record in your database
@@ -317,12 +312,9 @@ def payment_notification(request):
 @permission_classes([AllowAny])
 def payment_success(request):
     # Retrieve payment details from query parameters
-    payment_id = request.GET.get('payment_id')
-    amount = request.GET.get('amount')
+
 
     # Check if required parameters are present
-    if not payment_id or not amount:
-        return Response({"error": "Payment details missing"}, status=400)
 
     # Here you can verify the payment details if necessary
     # For example, checking against the database or external service
@@ -330,8 +322,6 @@ def payment_success(request):
     # Return the success response with payment details
     return Response({
         "message": "Payment successful!",
-        "payment_id": payment_id,
-        "amount": amount
     }, status=200)
 
 
@@ -341,20 +331,16 @@ def payment_success(request):
 @permission_classes([AllowAny])
 def payment_declined(request):
     # Retrieve payment details from query parameters
-    payment_id = request.GET.get('payment_id')
-    reason = request.GET.get('reason')
+
 
     # Check if required parameters are present
-    if not payment_id or not reason:
-        return Response({"error": "Payment details missing"}, status=400)
 
     # Log or process the declined payment details here if necessary
 
     # Return the decline response with payment details
     return Response({
         "message": "Payment declined.",
-        "payment_id": payment_id,
-        "reason": reason
+
     }, status=200)
 
 
@@ -363,19 +349,14 @@ def payment_declined(request):
 @permission_classes([AllowAny])
 def payment_canceled(request):
     # Retrieve payment details from query parameters
-    payment_id = request.GET.get('payment_id')
-    cancel_reason = request.GET.get('reason')
 
-    # Check if required parameters are present
-    if not payment_id:
-        return Response({"error": "Payment ID is missing."}, status=400)
+
 
     # Log or process the cancellation details here if necessary
 
     # Return the cancel response with payment details
     return Response({
         "message": "Payment was canceled by the user.",
-        "payment_id": payment_id,
-        "reason": cancel_reason or "No reason provided"
+
     }, status=200)
 
